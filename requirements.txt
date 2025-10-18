@@ -1,0 +1,14 @@
+rich
+pre-commit
+python-dotenv
+skrl==0.10.2
+#ipdb
+transforms3d
+open3d
+pytorch3d
+diffusers
+einops
+zarr
+numpy==1.21.6
+trimesh
+pycollada

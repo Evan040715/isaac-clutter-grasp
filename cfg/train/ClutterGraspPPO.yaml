@@ -1,0 +1,74 @@
+# ------------------------------------------------
+# ClutterGraspPPO.yaml (兼容原始PPO版)
+#
+# 这个文件为 ClutterGrasp 任务配置了 PPO 算法和其神经网络策略。
+# 核心修正: 为了兼容未经修改的 ppo.py 文件，我们添加了
+#          'pointnet_version', 'hand_pcl' 等所有必需的键，
+#          并赋予它们安全的、“关闭”状态的值。
+# ------------------------------------------------
+
+seed: -1
+
+clip_observations: 5.0
+clip_actions: 1.0
+
+setting:
+  action_type: 'direct'
+  sub_action_type: 'direct'
+  action_clip: False
+  grad_process: 'norm'
+
+policy:
+  # --- [核心修正] 添加 ppo.py 必需的键 ---
+  # 即使我们不用点云，也要明确告知 ppo.py
+  pointnet_version: 'none'  # 'none' 是一个安全的占位符
+  hand_pcl: False
+  pretrain_pointnet: False
+  shared_pointnet: True
+  finetune_pointnet: False
+
+  # --- 定义我们自己的简单 MLP 网络结构 ---
+  activation: elu
+  #pi_hid_sizes: [256, 128, 64]
+  #vf_hid_sizes: [256, 128, 64]
+
+  norm_action: False
+  action_scale: 1.0
+  distengle: False
+  #pointnet_version: 'pt'
+  #hand_pcl: False
+  #pretrain_pointnet: False
+  #shared_pointnet: True
+  #finetune_pointnet: True
+  points_per_object: 1024
+  hand_joint_dim: 18
+  hand_wrist_dim: 7
+  hand_state_dim: 25
+  pi_state_encoder_hid_sizes: [512,256] #[1024, 1024, 512]
+  vf_state_encoder_hid_sizes: [512,256] #[1024, 1024, 512]
+  pcl_feature_dim: 64
+  #activation: elu # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+
+  
+
+learn:
+  agent_name: clutter_grasp
+  test: False
+  resume: 0
+  save_interval: 1000
+  print_log: True
+  max_iterations: 50000
+  
+  # --- PPO 核心超参数 ---
+  cliprange: 0.2
+  ent_coef: 0.01
+  nsteps: 256
+  noptepochs: 5
+  nminibatches: 4
+  optim_stepsize: 3.e-4
+  schedule: adaptive
+  gamma: 0.99
+  lam: 0.95
+  desired_kl: 0.016
+  max_grad_norm: 1.0
+

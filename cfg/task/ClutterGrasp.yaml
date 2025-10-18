@@ -1,0 +1,68 @@
+# ------------------------------------------------
+# ClutterGrasp.yaml (最终修正版)
+#
+# 核心改动:
+# 将整个 'observationSpecs' 板块移动到了 'env' 板块的内部，
+# 以匹配 Python 代码的预期结构，从而解决 KeyError。
+# ------------------------------------------------
+
+name: "ClutterGrasp"
+
+physics_engine: ${..physics_engine}
+
+env:
+  # <<< 核心改动：'observationSpecs' 现在位于 'env' 内部 >>>
+  observationSpecs:
+    __dim__:
+      robot_dof: "placeholder" # 这个值会被 clutter_grasp_task.py 动态填充
+    
+    robot_dof_pos:
+      shape: [robot_dof]
+      attr: robot_dof_pos
+      tags: [robot, dof_pos]
+
+    robot_dof_vel:
+      shape: [robot_dof]
+      attr: robot_dof_vel
+      tags: [robot, dof_vel]
+    
+    eef_pos:
+      shape: [3]
+      attr: eef_pos
+      tags: [robot, eef_pos]
+    
+    target_pos:
+      shape: [3]
+      attr: target_pos
+      tags: [object, target_pos]
+
+  numEnvs: ${resolve_default:64,${...num_envs}}
+  envSpacing: 2.0
+  episodeLength: 500
+  enableDebugVis: False
+
+  # 告诉PPO算法，实际使用哪些“零件”来组成最终的观察向量
+  # 这些名字必须与上面 observationSpecs 中定义的名字完全对应。
+  observationSpace:
+    - robot_dof_pos
+    - robot_dof_vel
+    - eef_pos
+    - target_pos
+
+  numActions: "placeholder" # 由 clutter_grasp_task.py 动态设置
+
+sim:
+  dt: 0.0166
+  substeps: 2
+  up_axis: "z"
+  use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
+  gravity: [0.0, 0.0, -9.81]
+  physx:
+    num_threads: ${....num_threads}
+    solver_type: ${....solver_type}
+    use_gpu: ${contains:"cuda",${....sim_device}}
+    num_position_iterations: 8
+    num_velocity_iterations: 1
+    contact_offset: 0.002
+    rest_offset: 0.0
+

@@ -1,0 +1,47 @@
+clip_actions: 1.0
+clip_observations: 5.0
+learn:
+  agent_name: clutter_grasp
+  cliprange: 0.2
+  desired_kl: 0.016
+  ent_coef: 0.01
+  gamma: 0.99
+  lam: 0.95
+  max_grad_norm: 1.0
+  max_iterations: 50000
+  nminibatches: 4
+  noptepochs: 5
+  nsteps: 256
+  optim_stepsize: 0.0003
+  print_log: true
+  resume: 0
+  save_interval: 1000
+  schedule: adaptive
+  test: false
+policy:
+  action_scale: 1.0
+  activation: elu
+  distengle: false
+  finetune_pointnet: false
+  hand_joint_dim: 18
+  hand_pcl: false
+  hand_state_dim: 25
+  hand_wrist_dim: 7
+  norm_action: false
+  pcl_feature_dim: 64
+  pi_state_encoder_hid_sizes:
+  - 512
+  - 256
+  pointnet_version: none
+  points_per_object: 1024
+  pretrain_pointnet: false
+  shared_pointnet: true
+  vf_state_encoder_hid_sizes:
+  - 512
+  - 256
+seed: 0
+setting:
+  action_clip: false
+  action_type: direct
+  grad_process: norm
+  sub_action_type: direct

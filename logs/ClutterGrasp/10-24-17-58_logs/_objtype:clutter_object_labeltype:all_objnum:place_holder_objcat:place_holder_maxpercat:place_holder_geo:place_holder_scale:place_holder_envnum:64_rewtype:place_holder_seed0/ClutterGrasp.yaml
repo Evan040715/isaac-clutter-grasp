@@ -1,0 +1,60 @@
+name: ClutterGrasp
+physics_engine: physx
+env:
+  observationSpecs:
+    robot_dof_pos:
+      shape:
+      - robot_dof
+      attr: robot_dof_pos
+      tags:
+      - robot
+      - dof_pos
+    robot_dof_vel:
+      shape:
+      - robot_dof
+      attr: robot_dof_vel
+      tags:
+      - robot
+      - dof_vel
+    eef_pos:
+      shape:
+      - 3
+      attr: eef_pos
+      tags:
+      - robot
+      - eef_pos
+    target_pos:
+      shape:
+      - 3
+      attr: target_pos
+      tags:
+      - object
+      - target_pos
+  numEnvs: 64
+  envSpacing: 2.0
+  episodeLength: 500
+  enableDebugVis: false
+  observationSpace:
+  - robot_dof_pos
+  - robot_dof_vel
+  - eef_pos
+  - target_pos
+  numActions: 22
+  numObservations: 50
+sim:
+  dt: 0.0166
+  substeps: 2
+  up_axis: z
+  use_gpu_pipeline: true
+  gravity:
+  - 0.0
+  - 0.0
+  - -9.81
+  physx:
+    num_threads: 4
+    solver_type: 1
+    use_gpu: true
+    num_position_iterations: 8
+    num_velocity_iterations: 1
+    contact_offset: 0.002
+    rest_offset: 0.0

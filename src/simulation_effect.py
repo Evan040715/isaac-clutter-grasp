@@ -87,7 +87,7 @@ gym.add_ground(sim, plane_params)
 # 5. 加载资源
 # 5.1 GraspNet 物体模型
 asset_root_graspnet = "../assets/graspnet"
-NUM_MODELS_TO_LOAD = 10
+NUM_MODELS_TO_LOAD = 5
 
 all_asset_files = find_graspnet_urdfs(asset_root_graspnet)
 

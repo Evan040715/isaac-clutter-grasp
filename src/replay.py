@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_iterations", type=int, default=-1, help="Max iterations for training")
 
     parser.add_argument(
-        "--cfg_train", type=str, default="ShadowHandFunctionalManipulationUnderarmPPO", help="Training config"
+        "--cfg_train", type=str, default="ClutterGraspPPO", help="Training config"
     )
 
     parser.add_argument("--logdir", type=str, default="", help="Log directory")

@@ -7,8 +7,12 @@
 # 移除了与 Hydra 冲突的 `train=` 参数。
 # ------------------------------------------------
 
-# 1. 设置 PYTHONPATH
-export PYTHONPATH=src
+# 1. 激活 conda 环境
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate gym
+
+# 2. 设置 PYTHONPATH
+export PYTHONPATH="/home/evan/isaacgym/python:/home/evan/IsaacGymEnvs:$PYTHONPATH"
 
 # 2. 调用 train.py 并传入正确的参数
 #    --cfg_train: [核心修正] 明确指定使用哪个训练配置文件

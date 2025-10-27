@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_times", type=int, default=5, help="Eval times for each object")
     parser.add_argument("--max_iterations", type=int, default=-1, help="Max iterations for training")
     parser.add_argument(
-        "--cfg_train", type=str, default="ShadowHandFunctionalManipulationUnderarmPPO", help="Training config"
+        "--cfg_train", type=str, default="ClutterGraspPPO", help="Training config"
     )
     parser.add_argument("--logdir", type=str, default="", help="Log directory")
     parser.add_argument("--method", type=str, default="", help="Method name")
@@ -73,6 +73,17 @@ if __name__ == "__main__":
     rl_device = f"cuda:{args.run_device_id}"
 
     cfg_train, logdir = load_cfg(args)
+
+    # 检查是否有 task 参数通过 Hydra 传递
+    task_name = None
+    for override in args.overrides:
+        if override.startswith("task="):
+            task_name = override.split("=")[1]
+            break
+    
+    # 如果 task=ClutterGrasp 但没有设置 exp_name，自动设置 exp_name=ClutterGrasp
+    if task_name == "ClutterGrasp" and not args.exp_name:
+        args.exp_name = "ClutterGrasp"
 
     set_seed(args.seed)
     """Change for different methods."""
@@ -227,6 +238,12 @@ if __name__ == "__main__":
     if args.model_dir != "":
         chkpt_path = args.model_dir
 
+    # 如果 logdir 为空，设置一个默认的日志目录
+    if not logdir:
+        import time
+        time_now = time.strftime("%Y-%m-%d_%H-%M-%S")
+        logdir = f"logs/ClutterGrasp/{time_now}"
+    
     runner = PPO(
         vec_env=env,
         cfg_train=cfg_train,

@@ -49,17 +49,6 @@ class ClutterGraspTask(VecTask):
         # <<< 核心修正: 添加 PPO 日志记录逻辑必需的 object_codes 属性 >>>
         # 我们提供一个简单的占位符列表来满足接口要求。
         self.object_codes = ["clutter_object"]
-        self.label_paths = "place_holder"
-        self.num_objects = "place_holder"
-        self.object_cat = "place_holder"
-        self.max_per_cat = "place_holder"
-        self.object_geo_level = "place_holder"
-        self.object_scale = "place_holder"
-        self.reward_type = "place_holder"
-        self.mode = "train"
-        
-        # 初始化每个环境的物体数量
-        self.num_objects_per_env = 5
 
         # --- 首先获取机器人的关节数量 ---
         self._get_robot_dof_count()
@@ -187,19 +176,8 @@ class ClutterGraspTask(VecTask):
             obj_end_idx = self.gym.get_actor_count(env_ptr)
             self.object_actor_idxs.append(torch.arange(obj_start_idx, obj_end_idx, device=self.device, dtype=torch.long))
 
-        # 尝试找到末端执行器链接
-        EE_LINK_NAMES = ["link_15.0_tip", "link_11.0_tip", "link_7.0_tip", "link_3.0_tip"]
-        self.ee_handle_idx = -1
-        for link_name in EE_LINK_NAMES:
-            self.ee_handle_idx = self.gym.find_actor_rigid_body_handle(self.envs[0], self.robot_handles[0], link_name)
-            if self.ee_handle_idx != -1:
-                print(f"找到末端执行器链接: {link_name}")
-                break
-        
-        if self.ee_handle_idx == -1:
-            print("警告: 未找到末端执行器链接，使用默认链接")
-            # 使用最后一个链接作为末端执行器
-            self.ee_handle_idx = self.gym.get_actor_rigid_body_count(self.envs[0], self.robot_handles[0]) - 1
+        EE_LINK_NAME = "link_eef"
+        self.ee_handle_idx = self.gym.find_actor_rigid_body_handle(self.envs[0], self.robot_handles[0], EE_LINK_NAME)
         
         self.set_initial_state()
 
@@ -246,10 +224,10 @@ class ClutterGraspTask(VecTask):
         for env_id in env_ids:
             actor_idxs = self.object_actor_idxs[env_id]
             for actor_idx in actor_idxs:
-                self.root_states[env_id, actor_idx, 0] = torch_rand_float(-0.15, 0.15, (1,1), self.device)
-                self.root_states[env_id, actor_idx, 1] = torch_rand_float(-0.15, 0.15, (1,1), self.device)
+                self.root_states[env_id, actor_idx, 0] = torch_rand_float(-0.15, 0.15, (1,), self.device)
+                self.root_states[env_id, actor_idx, 1] = torch_rand_float(-0.15, 0.15, (1,), self.device)
                 self.root_states[env_id, actor_idx, 2] = 0.45
-                # self.root_states[env_id, actor_idx, 3:7] = random_quaternion(1, self.device).squeeze()
+                self.root_states[env_id, actor_idx, 3:7] = random_quaternion(1, self.device).squeeze()
             
             target_actor_local_idx = torch.randint(0, self.num_objects_per_env, (1,)).item()
             target_actor_global_idx = actor_idxs[target_actor_local_idx]
@@ -260,7 +238,7 @@ class ClutterGraspTask(VecTask):
             self.gym.set_actor_root_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.root_states), gymtorch.unwrap_tensor(object_global_indices.to(torch.int32)), len(object_global_indices))
 
         self.progress_buf[env_ids] = 0
-        self.reset_buf[env_ids.clone()] = 0
+        self.reset_buf[env_ids] = 0
 
     def pre_physics_step(self, actions):
         self.actions = actions.clone().to(self.device)
@@ -325,16 +303,4 @@ class ClutterGraspTask(VecTask):
     def retrieve_observation_dict(self):
         obs_dict = {spec.name: getattr(self, spec.attr) for spec in self._observation_space}
         return obs_dict
-    
-    def reset(self, env_ids=None):
-        """重置环境"""
-        if env_ids is None:
-            env_ids = torch.arange(self.num_envs, device=self.device)
-        self.reset_idx(env_ids)
-        return self.compute_observations()
 
-    def train(self):
-        self.training = True
-
-    def eval(self, vis=False):
-        self.training = False   

@@ -208,6 +208,13 @@ if __name__ == "__main__":
             "arm_actions",
             "hand_actions",
         ]
+        
+        cfg_train["learn"]["nsteps"] = 8
+        cfg_train["learn"]["noptepochs"] = 5
+        cfg_train["learn"]["nminibatches"] = 4
+        cfg_train["learn"]["desired_kl"] = 0.016
+        cfg_train["learn"]["gamma"] = 0.99
+        cfg_train["learn"]["clip_range"] = 0.1
 
     else:
         raise NotImplementedError(f"setting {args.exp_name} not supported") 

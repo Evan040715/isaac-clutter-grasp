@@ -36,6 +36,32 @@ class ObservationSpec:
         self.tags = kwargs.get("tags", [])
 
 class ClutterGraspTask(VecTask):
+    _xarm_right_init_dof_positions = {
+        "joint1": 0.0,
+        "joint2":-1,
+        "joint3":-0.5,
+        "joint4": 0.0,
+        "joint5": 0.0,
+        "joint6": 0.0,
+    }
+    _allegro_hand_init_dof_positions = {
+        "joint_0.0": 0,
+        "joint_1.0": 0.0,
+        "joint_2.0": 0,
+        "joint_3.0": 0,
+        "joint_4.0": 0.0,
+        "joint_5.0": 0.0,
+        "joint_6.0": 0,
+        "joint_7.0": 0,
+        "joint_8.0": 0,
+        "joint_9.0": 0,
+        "joint_10.0": 0,
+        "joint_11.0": 0,
+        "joint_12.0": 0,
+        "joint_13.0": 0.0,
+        "joint_14.0": 0,
+        "joint_15.0": 0.0,
+    }
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
         self.cfg = cfg
         
@@ -81,7 +107,13 @@ class ClutterGraspTask(VecTask):
 
         self.dof_pos = self.dof_states[..., 0]
         self.dof_vel = self.dof_states[..., 1]
+
+        self.allegro_hand_dof_positions = self.dof_states[:, self.allegro_hand_dof_start : self.allegro_hand_dof_end, 0]
+        self.allegro_hand_dof_velocities = self.dof_states[:, self.allegro_hand_dof_start : self.allegro_hand_dof_end, 1]
         
+        self.curr_targets_buffer = torch.zeros((self.num_envs, self.num_dofs), device=self.device, dtype=torch.float)
+        self.curr_targets = self.curr_targets_buffer[:, self.allegro_hand_dof_start : self.allegro_hand_dof_end]
+
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
         self.progress_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
         
@@ -130,10 +162,23 @@ class ClutterGraspTask(VecTask):
         robot_asset_options = gymapi.AssetOptions(); robot_asset_options.fix_base_link = True; robot_asset_options.disable_gravity = True
         robot_asset = self.gym.load_asset(self.sim, self.asset_root, robot_asset_file, robot_asset_options)
         
+        # num_dofs = self.gym.get_asset_dof_count(robot_asset)
+        
+        dof_init_positions = [0.0 for _ in range(self.num_dofs)]
+        dof_init_velocities = [0.0 for _ in range(self.num_dofs)]
+        
+        for name, value in self._xarm_right_init_dof_positions.items():
+            dof_init_positions[self.gym.find_asset_dof_index(robot_asset, name)] = value
+        for name, value in self._allegro_hand_init_dof_positions.items():
+            dof_init_positions[self.gym.find_asset_dof_index(robot_asset, name)] = value
+            
+        self.dof_init_positions = torch.tensor(dof_init_positions).float().to(self.device)
+        self.dof_init_velocities = torch.tensor(dof_init_velocities).float().to(self.device)
+        
         dof_props = self.gym.get_asset_dof_properties(robot_asset)
         dof_props["driveMode"].fill(gymapi.DOF_MODE_POS); dof_props["stiffness"].fill(400.0); dof_props["damping"].fill(40.0)
 
-        self.num_object_models_to_load = 5
+        self.num_object_models_to_load = 1
         self.object_assets = []
         
         all_graspnet_files = find_graspnet_urdfs(os.path.join(self.asset_root, "graspnet"))
@@ -174,7 +219,9 @@ class ClutterGraspTask(VecTask):
 
             robot_pose = gymapi.Transform(); robot_pose.p = gymapi.Vec3(-0.5, 0.0, table_dims.z)
             robot_handle = self.gym.create_actor(env_ptr, robot_asset, robot_pose, "robot", i, 1)
-            self.robot_handles.append(robot_handle)
+            robot_handle_idx = self.gym.get_actor_index(env_ptr, robot_handle, gymapi.DOMAIN_SIM)
+            # print(i, robot_handle, robot_handle_idx)
+            self.robot_handles.append(robot_handle_idx)
             self.gym.set_actor_dof_properties(env_ptr, robot_handle, dof_props)
             
             obj_start_idx = self.gym.get_actor_count(env_ptr)
@@ -186,6 +233,11 @@ class ClutterGraspTask(VecTask):
                 self.gym.create_actor(env_ptr, asset, pose, f"object_{j}", i, 1)
             obj_end_idx = self.gym.get_actor_count(env_ptr)
             self.object_actor_idxs.append(torch.arange(obj_start_idx, obj_end_idx, device=self.device, dtype=torch.long))
+            
+        env = self.envs[-1]
+        allegro_hand = self.gym.find_actor_handle(env, "robot")
+        self.allegro_hand_dof_start = self.gym.get_actor_dof_index(env, allegro_hand, 0, gymapi.DOMAIN_ENV)
+        self.allegro_hand_dof_end = self.allegro_hand_dof_start + self.num_dofs
 
         # 尝试找到末端执行器链接
         EE_LINK_NAMES = ["link_15.0_tip", "link_11.0_tip", "link_7.0_tip", "link_3.0_tip"]
@@ -239,7 +291,13 @@ class ClutterGraspTask(VecTask):
         self.dof_pos[env_ids] = pos
         self.dof_vel[env_ids] = 0.0
         
+        self.allegro_hand_dof_positions[env_ids, :] = self.dof_init_positions
+        self.allegro_hand_dof_velocities[env_ids, :] = self.dof_init_velocities
+
+        self.curr_targets[env_ids] = self.dof_init_positions
+
         robot_indices = torch.tensor(self.robot_handles, dtype=torch.int32, device=self.device)[env_ids].flatten()
+        # breakpoint()
         if len(robot_indices) > 0:
             self.gym.set_dof_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.dof_states), gymtorch.unwrap_tensor(robot_indices), len(robot_indices))
         
@@ -273,7 +331,6 @@ class ClutterGraspTask(VecTask):
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         if len(env_ids) > 0:
             self.reset_idx(env_ids)
-            
         self.compute_observations()
         self.compute_reward(self.actions)
 

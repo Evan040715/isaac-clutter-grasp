@@ -21,7 +21,7 @@ python src/train.py \
     --cfg_train ClutterGraspPPO \
     task=ClutterGrasp \
     headless=False \
-    num_envs=64 \
+    num_envs=4096 \
     --exp_name='ClutterGrasp' \
     --logdir='logs/' \
     --run_device_id=0
